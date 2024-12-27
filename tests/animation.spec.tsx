@@ -1,8 +1,8 @@
-import type { CSSInterpolation } from "../src";
+import type { CSSInterpolation } from "cssinjs-vue";
 import { mount } from "@vue/test-utils";
+import { Keyframes, Theme, useCacheToken, useStyleRegister } from "cssinjs-vue";
 import { beforeEach, describe, expect, it } from "vitest";
 import { computed, defineComponent, h } from "vue";
-import { Keyframes, Theme, useCacheToken, useStyleRegister } from "../src";
 import { _cf } from "../src/hooks/useStyleRegister";
 
 interface DesignToken {

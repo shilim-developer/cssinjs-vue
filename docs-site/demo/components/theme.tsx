@@ -52,6 +52,7 @@ export const DesignTokenContextKey: InjectionKey<{
   hashed?: string | boolean | undefined;
   theme?: Theme<any, any>;
   cssVar?: {
+    prefix?: string;
     key: string;
   };
 }> = Symbol("DesignTokenContext");

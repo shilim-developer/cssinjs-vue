@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from "vue";
 import type Theme from "../theme/Theme";
+import type { MaybeComputedRef } from "../util";
 import type { ExtractStyle } from "./useGlobalCache";
 import hash from "@emotion/hash";
 import { computed, ref } from "vue";
@@ -131,7 +132,7 @@ export function getComputedToken<
 
 export const TOKEN_PREFIX = "token";
 
-type TokenCacheValue<DerivativeToken> = [
+export type TokenCacheValue<DerivativeToken> = [
   token: DerivativeToken & { _tokenKey: string; _themeKey: string },
   hashId: string,
   realToken: DerivativeToken & { _tokenKey: string },
@@ -150,8 +151,8 @@ export default function useCacheToken<
   DerivativeToken = object,
   DesignToken = DerivativeToken,
 >(
-  theme: Ref<Theme<any, any>>,
-  tokens: Ref<Partial<DesignToken>[]>,
+  theme: MaybeComputedRef<Theme<any, any>>,
+  tokens: MaybeComputedRef<Partial<DesignToken>[]>,
   option: Ref<Option<DerivativeToken, DesignToken>> = ref({}),
 ): ComputedRef<TokenCacheValue<DerivativeToken>> {
   const contextProps = useStyleInject();

@@ -14,7 +14,7 @@ export default function createTheme<
   derivatives:
     | DerivativeFunc<DesignToken, DerivativeToken>[]
     | DerivativeFunc<DesignToken, DerivativeToken>,
-) {
+): Theme<DesignToken, DerivativeToken> {
   const derivativeArr = Array.isArray(derivatives)
     ? derivatives
     : [derivatives];

@@ -81,10 +81,12 @@ export type StyleProviderProps =
   | Partial<StyleContextProps>
   | Ref<Partial<StyleContextProps>>;
 
+// If there is no provider, automatically generate a global provider
+const globalCache = createCache();
 export function useStyleInject() {
   return inject(StyleContextKey, {
     hashPriority: "low",
-    cache: createCache(),
+    cache: globalCache,
     defaultCache: true,
   });
 }
