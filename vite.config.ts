@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
-    dts(),
+    dts({ tsconfigPath: "./tsconfig.app.json" }),
   ],
   build: {
     minify: false,
@@ -28,8 +28,9 @@ export default defineConfig({
     },
     lib: {
       entry: "src/index.ts",
+      name: "index",
       formats: ["es", "cjs"],
-      fileName: format => `index.${format === "es" ? "mjs" : "js"}`,
+      fileName: format => `index.${format}.js`,
     },
   },
 });

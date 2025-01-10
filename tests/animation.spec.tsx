@@ -142,7 +142,7 @@ describe("animation", () => {
           };
         },
       });
-      mount(Demo);
+      const app = mount(Demo);
 
       const styles = Array.from(document.head.querySelectorAll("style"));
       expect(styles).toHaveLength(2);
@@ -153,6 +153,7 @@ describe("animation", () => {
       expect(styles[1].innerHTML).toEqual(
         `@keyframes ${testHashId}-anim{to{transform:rotate(360deg);}}`,
       );
+      app.unmount();
     });
 
     it("could be used without declaring keyframes", () => {
@@ -176,7 +177,7 @@ describe("animation", () => {
           return () => h("div");
         },
       });
-      mount(Demo);
+      const app = mount(Demo);
 
       const styles = Array.from(document.head.querySelectorAll("style"));
       expect(styles).toHaveLength(2);
@@ -187,6 +188,7 @@ describe("animation", () => {
       expect(styles[1].innerHTML).toEqual(
         `@keyframes ${testHashId}-anim{to{transform:rotate(360deg);}}`,
       );
+      app.unmount();
     });
 
     it("keyframes should be only declared once", () => {
@@ -211,7 +213,7 @@ describe("animation", () => {
           return () => h("div");
         },
       });
-      mount(Demo);
+      const app = mount(Demo);
 
       const styles = Array.from(document.head.querySelectorAll("style"));
       expect(styles).toHaveLength(2);
@@ -222,6 +224,7 @@ describe("animation", () => {
       expect(styles[1].innerHTML).toEqual(
         `@keyframes ${testHashId}-anim{to{transform:rotate(360deg);}}`,
       );
+      app.unmount();
     });
   });
 });

@@ -167,6 +167,7 @@ describe("theme", () => {
     expect(tokenList.length).toBe(3);
     expect(tokenList[0]).toEqual(tokenList[1]);
     expect(tokenList[0]).not.toEqual(tokenList[2]);
+    app.unmount();
   });
 
   it("support pipe derivatives", () => {
@@ -213,6 +214,7 @@ describe("theme", () => {
     expect(JSON.parse(tokenList[0]!)).toHaveProperty("primaryColor", "red");
     expect(JSON.parse(tokenList[0]!)).toHaveProperty("primaryColorText", "red");
     expect(JSON.parse(tokenList[0]!)).toHaveProperty("primaryColorIcon", "red");
+    app.unmount();
   });
 
   it("should warn if empty array", () => {

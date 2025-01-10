@@ -86,6 +86,7 @@ describe("animation", () => {
       });
 
       expect(count).toEqual(1);
+      app.unmount();
     });
   });
 });

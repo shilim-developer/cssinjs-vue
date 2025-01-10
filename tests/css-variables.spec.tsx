@@ -1,5 +1,6 @@
 import type { ComputedRef, InjectionKey, PropType, Ref } from "vue";
 import { TinyColor } from "@ctrl/tinycolor";
+import { page } from "@vitest/browser/context";
 import { mount } from "@vue/test-utils";
 import classNames from "classnames";
 import {
@@ -13,9 +14,12 @@ import {
   useStyleRegister,
 } from "cssinjs-vue";
 import { beforeEach, describe, expect, it } from "vitest";
-import { computed, defineComponent, inject, render } from "vue";
+import { render } from "vitest-browser-vue";
+import { computed, defineComponent, inject, nextTick } from "vue";
 import DesignTokenContext from "../docs-site/demo/components/DesignTokenContext.vue";
 import { DesignTokenContextKey } from "../docs-site/demo/components/theme";
+import { _cf } from "../src/hooks/useStyleRegister";
+import { colorNameToRgb, colorsEqual } from "./utils";
 
 export interface DesignToken {
   primaryColor: string;
@@ -82,7 +86,7 @@ const DesignTokenProvider = defineComponent({
     },
   },
   setup(props, { slots }) {
-    const parentContext = defaultConfig;
+    const parentContext = inject(DesignTokenContextKey, defaultConfig);
     const customTheme = computed(() => props.theme!);
 
     const mergedCtx = computed(() => {
@@ -188,9 +192,9 @@ function useStyle() {
   return `${hashId.value}${cssVarKey.value ? ` ${cssVarKey.value}` : ""}`;
 }
 const Box = defineComponent({
-  setup(_, { attrs }) {
+  setup() {
     const cls = useStyle();
-    return () => <div class={classNames(cls, "box", attrs.class as any)} />;
+    return () => <div class={classNames(cls, "box")} style={{ width: "10px", height: "10px" }} />;
   },
 });
 
@@ -202,7 +206,7 @@ describe("cSS Variables", () => {
     });
   });
 
-  it("should work with cssVar", () => {
+  it("should work with cssVar", async () => {
     const TestContent = defineComponent({
       name: "TestContent",
       setup() {
@@ -219,10 +223,12 @@ describe("cSS Variables", () => {
         );
       },
     });
-    const app = mount(TestContent);
+    const app = render(TestContent);
+    await nextTick();
     const styles = Array.from(document.head.querySelectorAll("style"));
-    const box = app.find<HTMLDivElement>(".target")!;
-    const boxStyle = getComputedStyle(box.element);
+    const box = app.container.querySelector(".target") as HTMLDivElement;
+    const boxStyle = getComputedStyle(box);
+    const baseFontSize = Number.parseInt(getComputedStyle(app.baseElement).fontSize);
 
     expect(styles.length).toBe(3);
     expect(styles[0].textContent).toContain(".apple{");
@@ -231,17 +237,15 @@ describe("cSS Variables", () => {
     expect(styles[0].textContent).not.toContain("--rc-small-screen:800;");
     expect(styles[1].textContent).toContain("--rc-box-box-color:#5c21ff");
     expect(styles[1].textContent).toContain(".apple.box{");
-    expect(styles[2].textContent).toContain(
-      "line-height:var(--rc-line-height);",
-    );
+    expect(styles[2].textContent).toContain("line-height:var(--rc-line-height);");
     expect(styles[2].textContent).toContain("content:\"800\"");
-    expect(box.classes()).toContain("apple");
-    expect(boxStyle.getPropertyValue("--rc-line-height")).toEqual("1.5");
-    expect(boxStyle.lineHeight).toEqual("var(--rc-line-height)");
+    expect(box).toHaveClass("apple");
+    expect(boxStyle.getPropertyValue("--rc-line-height")).toContain(1.5);
+    expect(boxStyle.lineHeight).toContain(`${baseFontSize * 1.5}px`);
   });
 
-  it("could mix with non-css-var", () => {
-    const app = mount(() => (
+  it("could mix with non-css-var", async () => {
+    const app = render(() => (
       <>
         <Box class="non-css-var" />
         <DesignTokenProvider
@@ -279,97 +283,103 @@ describe("cSS Variables", () => {
         </DesignTokenProvider>
       </>
     ));
-
+    await nextTick();
     const styles = Array.from(document.head.querySelectorAll("style"));
-    styles.forEach((item) => {
-      console.log("styles:", item.innerHTML);
-    });
     expect(styles).toHaveLength(7);
 
-    // const nonCssVarBox = container.querySelector(".non-css-var")!;
-    // expect(nonCssVarBox).toHaveStyle({
-    //   lineHeight: "1.5",
-    //   border: "1px solid black",
-    //   backgroundColor: "#1890ff",
-    //   color: "#5c21ff",
-    // });
+    const nonCssVarBox = app.container.querySelector(".non-css-var")!;
+    const boxStyle = getComputedStyle(nonCssVarBox);
+    const baseFontSize = Number.parseInt(getComputedStyle(app.baseElement).fontSize);
+    expect(boxStyle.lineHeight).toEqual(`${baseFontSize * 1.5}px`);
+    expect(boxStyle.border).toEqual(`1px solid ${colorNameToRgb("black")}`);
+    expect(colorsEqual(boxStyle.backgroundColor, "#1890ff")).toBe(true);
+    expect(colorsEqual(boxStyle.color, "#5c21ff")).toBe(true);
 
-    // const cssVarBox = container.querySelector(".css-var")!;
-    // expect(cssVarBox).toHaveStyle({
-    //   "--rc-line-height": "1.5",
-    //   "--rc-border-width": "1px",
-    //   "--rc-border-color": "black",
-    //   "--rc-primary-color": "#1677ff",
-    //   "--rc-box-box-color": "#5c21ff",
-    //   "lineHeight": "var(--rc-line-height)",
-    //   "border": "var(--rc-border-width) solid var(--rc-border-color)",
-    //   "backgroundColor": "var(--rc-primary-color)",
-    //   "color": "var(--rc-box-box-color)",
-    // });
+    const cssVarBox = app.container.querySelector(".css-var")!;
+    const cssVarBoxStyle = getComputedStyle(cssVarBox);
 
-    // const cssVarBox2 = container.querySelector(".css-var-2")!;
-    // expect(cssVarBox2).toHaveClass("banana");
-    // expect(cssVarBox2).not.toHaveClass("apple");
-    // expect(cssVarBox2).toHaveStyle({
-    //   "--rc-line-height": "1.5",
-    //   "--rc-border-width": "2px",
-    //   "--rc-border-color": "black",
-    //   "--rc-primary-color": "#1677ff",
-    //   "--rc-box-box-color": "#5c21ff",
-    //   "lineHeight": "var(--rc-line-height)",
-    //   "border": "var(--rc-border-width) solid var(--rc-border-color)",
-    //   "backgroundColor": "var(--rc-primary-color)",
-    //   "color": "var(--rc-box-box-color)",
-    // });
+    expect(cssVarBoxStyle.getPropertyValue("--rc-line-height")).toEqual("1.5");
+    expect(cssVarBoxStyle.getPropertyValue("--rc-border-width")).toEqual("1px");
+    expect(cssVarBoxStyle.getPropertyValue("--rc-border-color")).toEqual("black");
+    expect(cssVarBoxStyle.getPropertyValue("--rc-primary-color")).toEqual("#1677ff");
+    expect(cssVarBoxStyle.getPropertyValue("--rc-box-box-color")).toEqual("#5c21ff");
+    expect(cssVarBoxStyle.lineHeight).toEqual(`${baseFontSize * 1.5}px`);
+    expect(cssVarBoxStyle.border).toEqual(`1px solid ${colorNameToRgb("black")}`);
+    expect(colorsEqual(cssVarBoxStyle.backgroundColor, "#1677ff")).toBe(true);
+    expect(colorsEqual(cssVarBoxStyle.color, "#5c21ff")).toBe(true);
 
-    // const nonCssVarBox2 = container.querySelector(".non-css-var-2")!;
-    // expect(nonCssVarBox2).not.toHaveClass("banana");
-    // expect(nonCssVarBox2).not.toHaveClass("apple");
-    // expect(nonCssVarBox2).toHaveStyle({
-    //   lineHeight: "1.5",
-    //   border: "3px solid black",
-    //   backgroundColor: "#1677ff",
-    //   color: "#5c21ff",
-    // });
+    const cssVarBox2 = app.container.querySelector(".css-var-2")!;
+    const cssVarBox2Style = getComputedStyle(cssVarBox2);
+    expect(cssVarBox2).toHaveClass("banana");
+    expect(cssVarBox2).not.toHaveClass("apple");
+    expect(cssVarBox2Style.getPropertyValue("--rc-line-height")).toEqual("1.5");
+    expect(cssVarBox2Style.getPropertyValue("--rc-border-width")).toEqual("2px");
+    expect(cssVarBox2Style.getPropertyValue("--rc-border-color")).toEqual("black");
+    expect(cssVarBox2Style.getPropertyValue("--rc-primary-color")).toEqual("#1677ff");
+    expect(cssVarBox2Style.getPropertyValue("--rc-box-box-color")).toEqual("#5c21ff");
+    expect(cssVarBox2Style.lineHeight).toEqual(`${baseFontSize * 1.5}px`);
+    expect(cssVarBox2Style.border).toEqual(`2px solid ${colorNameToRgb("black")}`);
+    expect(colorsEqual(cssVarBox2Style.backgroundColor, "#1677ff")).toBe(true);
+    expect(colorsEqual(cssVarBox2Style.color, "#5c21ff")).toBe(true);
+
+    const nonCssVarBox2 = app.container.querySelector(".non-css-var-2")!;
+    const nonCssVarBox2Style = getComputedStyle(nonCssVarBox2);
+    expect(nonCssVarBox2).not.toHaveClass("banana");
+    expect(nonCssVarBox2).not.toHaveClass("apple");
+    expect(nonCssVarBox2Style.lineHeight).toEqual(`${baseFontSize * 1.5}px`);
+    expect(nonCssVarBox2Style.border).toEqual(`3px solid ${colorNameToRgb("black")}`);
+    expect(colorsEqual(nonCssVarBox2Style.backgroundColor, "#1677ff")).toBe(true);
+    expect(colorsEqual(nonCssVarBox2Style.color, "#5c21ff")).toBe(true);
   });
 
-  // it("dynamic", () => {
-  //   const Demo = (props: { token?: Partial<DerivativeToken> }) => (
-  //     <DesignTokenProvider
-  //       theme={{
-  //         token: props.token,
-  //         cssVar: {
-  //           key: "apple",
-  //         },
-  //       }}
-  //     >
-  //       <Box className="target" />
-  //     </DesignTokenProvider>
-  //   );
+  it("dynamic", async () => {
+    const Demo = defineComponent({
+      name: "Demo",
+      props: {
+        token: {
+          type: Object as PropType<Partial<DerivativeToken>>,
+        },
+      },
+      setup(props) {
+        return () => (
+          <DesignTokenProvider
+            theme={{
+              token: props.token,
+              cssVar: {
+                key: "apple",
+              },
+            }}
+          >
+            <Box class="target" />
+          </DesignTokenProvider>
+        );
+      },
+    });
 
-  //   const { container, rerender } = render(<Demo />);
+    const { container, rerender } = render(<Demo />);
+    await nextTick();
 
-  //   let styles = Array.from(document.head.querySelectorAll("style"));
-  //   const box = container.querySelector(".target")!;
+    let styles = Array.from(document.head.querySelectorAll("style"));
+    const box = container.querySelector(".target")!;
+    const boxStyle = getComputedStyle(box);
+    console.log("boxStyle:", boxStyle.getPropertyPriority("--rc-line-height"));
 
-  //   expect(styles.length).toBe(3);
-  //   expect(box).toHaveClass("apple");
-  //   expect(box).toHaveStyle({
-  //     "--rc-line-height": "1.5",
-  //     "lineHeight": "var(--rc-line-height)",
-  //   });
+    expect(styles.length).toBe(3);
+    expect(box).toHaveClass("apple");
+    expect(boxStyle.getPropertyPriority("--rc-line-height")).toEqual("1.5");
+    expect(boxStyle.lineHeight).toEqual("var(--rc-line-height)");
 
-  //   rerender(<Demo token={{ lineHeight: 2 }} />);
+    rerender(<Demo token={{ lineHeight: 2 }} />);
 
-  //   styles = Array.from(document.head.querySelectorAll("style"));
+    styles = Array.from(document.head.querySelectorAll("style"));
 
-  //   expect(styles.length).toBe(3);
-  //   expect(box).toHaveClass("apple");
-  //   expect(box).toHaveStyle({
-  //     "--rc-line-height": "2",
-  //     "lineHeight": "var(--rc-line-height)",
-  //   });
-  // });
+    expect(styles.length).toBe(3);
+    expect(box).toHaveClass("apple");
+    expect(box).toHaveStyle({
+      "--rc-line-height": "2",
+      "lineHeight": "var(--rc-line-height)",
+    });
+  });
 
   // it("could autoClear", () => {
   //   const { rerender } = render(

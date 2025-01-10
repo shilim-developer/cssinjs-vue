@@ -7,7 +7,6 @@ export default mergeConfig(
     test: {
       include: ["**/tests/*.spec.*"],
       globals: true,
-      environment: "jsdom",
     },
   }),
 );
